@@ -1,0 +1,41 @@
+name: Delete unmerged branch
+
+on:
+  pull_request:
+    branches: [ main ]
+    types: [ closed ]
+
+jobs:
+  worker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: delete-unmerged-branch
+        uses: actions/github-script@v4.1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { repo, owner } = context.repo;
+            const pull_number = context.payload.pull_request.number;
+            const ref = `heads/${context.payload.pull_request.head.ref}`;
+            const checkParams = { owner, repo, pull_number };
+            const deleteParams = { owner, repo, ref };
+
+            const isMerged = await (async () => {
+              try {
+                await github.pulls.checkIfMerged(checkParams);
+                return true;
+              } catch (e) {
+                if (e.status && e.status === 404) { return false; }
+                // escalate all unexpected errors
+                throw e;
+              }
+            })();
+
+            if (!isMerged) {
+              console.log(`Deleting branch: "${ref}"`);
+              try {
+                github.git.deleteRef(deleteParams);
+              } catch(e) {
+                console.log("Cannot delete branch; error:", e);
+              }
+            }
