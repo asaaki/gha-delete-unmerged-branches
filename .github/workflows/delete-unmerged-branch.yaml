@@ -21,7 +21,7 @@ jobs:
 
             console.log(`Deleting branch: "${ref}"`);
             try {
-              github.git.deleteRef(deleteParams);
+              github.rest.git.deleteRef(deleteParams);
             } catch(e) {
               console.log("Cannot delete branch; error:", e);
             }
